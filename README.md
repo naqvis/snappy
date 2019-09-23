@@ -26,7 +26,7 @@ require "snappy"
 
 Module provides both `Snappy::Reader` and `Snappy::Writer` for use with streams like `IO` and/or files. It also provides `Snappy#decode` and `Snappy#encode` for uncompressing and compressing block formats.
 
-# ### Example: decompress a snappy file
+## Example: decompress a snappy file
 #
 ```crystal
 require "snappy"
@@ -40,7 +40,7 @@ string = File.open("file.sz") do |file|
 end
 string # => "abcd"
 ```
-# ## Example: compress a file to snappy format
+## Example: compress a file to snappy format
 #
 ```crystal
 require "snappy"

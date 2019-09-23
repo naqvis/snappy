@@ -1,0 +1,11 @@
+name: snappy
+version: 0.1.0
+description: |
+Snappy compression format reader/writer for Crystal
+
+authors:
+  - Ali Naqvi <syed.alinaqvi@gmail.com>
+
+crystal: 0.30.1
+
+license: MIT

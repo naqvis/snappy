@@ -144,9 +144,9 @@ class Snappy::Writer < IO
 
     header = Bytes.new(4)
     header[0] = flag.value.to_u8
-    header[1] = (header_len >> 0).to_u8
-    header[2] = (header_len >> 8).to_u8
-    header[3] = (header_len >> 16).to_u8
+    header[1] = (header_len >> 0).to_u8!
+    header[2] = (header_len >> 8).to_u8!
+    header[3] = (header_len >> 16).to_u8!
 
     @io.write header
 

@@ -18,7 +18,7 @@ class Snappy::CRC32C
   # returns a masked representation of crc.
   def self.mask(crc)
     # Rotate right by 15 bits and add a constant
-    ((crc >> 15) | (crc << 17)) + MASK_DELTA
+    ((crc >> 15) | (crc << 17)) &+ MASK_DELTA
   end
 
   # return the crc whose masked representation is masked crc
@@ -59,7 +59,7 @@ class Snappy::CRC32C
       c3 = b[off + 3].to_u32 ^ (local_crc = (local_crc.to_u >> 8).to_u32)
       off += 4
       local_crc = ((T8_7[c0 & 0xff] ^ T8_6[c1 & 0xff]) ^
-                   (T8_5[c2 & 0xff] ^ T8_4[c3 & 0xff])).to_u32
+                   (T8_5[c2 & 0xff] ^ T8_4[c3 & 0xff])).to_u32!
 
       local_crc ^= (T8_3[b[off] & 0xff] ^ T8_2[b[off + 1] & 0xff]) ^
                    (T8_1[b[off + 2] & 0xff] ^ T8_0[b[off + 3] & 0xff])
@@ -68,7 +68,7 @@ class Snappy::CRC32C
     end
 
     while len > 0
-      local_crc = ((local_crc.to_u32 >> 8) ^ T8_0[(local_crc ^ b[off]) & 0xff]).to_u32
+      local_crc = ((local_crc.to_u32 >> 8) ^ T8_0[(local_crc ^ b[off]) & 0xff]).to_u32!
       off += 1
       len -= 1
     end

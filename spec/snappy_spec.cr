@@ -116,15 +116,15 @@ module Snappy
     input.copy_from(Consts::MAGIC_CHUNK.to_unsafe, Consts::MAGIC_CHUNK.size)
     input[10] = ChunkType::Uncompressed.value.to_u8
     length = random.size.to_u32 + 4
-    input[11] = length.to_u8
-    input[12] = (length >> 8).to_u8
-    input[13] = (length >> 16).to_u8
+    input[11] = length.to_u8!
+    input[12] = (length >> 8).to_u8!
+    input[13] = (length >> 16).to_u8!
 
     crc32 = CRC32C.masked_crc32c(random)
-    input[14] = crc32.to_u8
-    input[15] = (crc32 >> 8).to_u8
-    input[16] = (crc32 >> 16).to_u8
-    input[17] = (crc32 >> 24).to_u8
+    input[14] = crc32.to_u8!
+    input[15] = (crc32 >> 8).to_u8!
+    input[16] = (crc32 >> 16).to_u8!
+    input[17] = (crc32 >> 24).to_u8!
 
     input[18..].copy_from(random.to_unsafe, random.size)
 
@@ -141,15 +141,15 @@ module Snappy
     input.copy_from(Consts::MAGIC_CHUNK.to_unsafe, Consts::MAGIC_CHUNK.size)
     input[10] = ChunkType::Compressed.value.to_u8
     length = compressed.size.to_u32 + 4
-    input[11] = length.to_u8
-    input[12] = (length >> 8).to_u8
-    input[13] = (length >> 16).to_u8
+    input[11] = length.to_u8!
+    input[12] = (length >> 8).to_u8!
+    input[13] = (length >> 16).to_u8!
 
     crc32 = CRC32C.masked_crc32c(random)
-    input[14] = crc32.to_u8
-    input[15] = (crc32 >> 8).to_u8
-    input[16] = (crc32 >> 16).to_u8
-    input[17] = (crc32 >> 24).to_u8
+    input[14] = crc32.to_u8!
+    input[15] = (crc32 >> 8).to_u8!
+    input[16] = (crc32 >> 16).to_u8!
+    input[17] = (crc32 >> 24).to_u8!
 
     input[18..].copy_from(compressed.to_unsafe, compressed.size)
 
@@ -165,16 +165,16 @@ module Snappy
     input = Bytes.new(Consts::MAGIC_CHUNK.size + 8 + compressed.size)
     input.copy_from(Consts::MAGIC_CHUNK.to_unsafe, Consts::MAGIC_CHUNK.size)
     input[10] = ChunkType::Compressed.value.to_u8
-    length = compressed.size.to_u32 + 4
-    input[11] = length.to_u8
-    input[12] = (length >> 8).to_u8
-    input[13] = (length >> 16).to_u8
+    length = compressed.size.to_u32! + 4
+    input[11] = length.to_u8!
+    input[12] = (length >> 8).to_u8!
+    input[13] = (length >> 16).to_u8!
 
     crc32 = CRC32C.masked_crc32c(random)
-    input[14] = crc32.to_u8
-    input[15] = (crc32 >> 8).to_u8
-    input[16] = (crc32 >> 16).to_u8
-    input[17] = (crc32 >> 24).to_u8
+    input[14] = crc32.to_u8!
+    input[15] = (crc32 >> 8).to_u8!
+    input[16] = (crc32 >> 16).to_u8!
+    input[17] = (crc32 >> 24).to_u8!
 
     input[18..].copy_from(compressed.to_unsafe, compressed.size)
 
@@ -292,7 +292,7 @@ module Snappy
     Snappy::Writer.open(io) do |sw|
       i = 0
       while i < size
-        to_write = Math.max((size - i) / 4, 512)
+        to_write = Math.max((size - i) // 4, 512)
         # write some data to be compressed
         sw.write random[i, Math.min(size - i, to_write)]
         # force teh write of a frame

@@ -38,7 +38,7 @@ module Snappy
       # I.e., 6 bytes of input turn into 7 bytes of "compressed" data.
       #
       # This last factor dominates the blowup, so the final estimate is:
-      32 + source_len + source_len / 6
+      32 + source_len + source_len // 6
     end
 
     private def compress(src : Slice, dst : Slice)
@@ -220,8 +220,8 @@ module Snappy
         # we could immediately start working at ip now, but to improve compression we first
         # update table[hash_bytes(ip -1, ...)].
         foo = Utils.load_int64(input[ip_index - 1..])
-        prev_int = foo.to_i
-        input_bytes = (foo >> 8).to_i
+        prev_int = foo.to_i!
+        input_bytes = (foo >> 8).to_i!
 
         # add hash starting with previous byte
         prev_hash = hash_bytes(prev_int, shift)
@@ -243,7 +243,7 @@ module Snappy
       n = length - 1 # Zero-length literals are disallowed
       if n < 60
         # size fits in a tag byte
-        output[output_index] = (Snappy::ElemType::Literal.value | (n << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Literal.value | (n << 2)).to_u8!
         output_index += 1
         # The vast majority of copies are below 16 bytes, for which a
         # call to memcpy is overkill. This fast path can sometimes
@@ -262,36 +262,36 @@ module Snappy
           return output_index
         end
       elsif n < (1 << 8)
-        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 1 << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 1 << 2)).to_u8!
         output_index += 1
-        output[output_index] = n.to_u8
+        output[output_index] = n.to_u8!
         output_index += 1
       elsif n < (1 << 16)
-        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 2 << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 2 << 2)).to_u8!
         output_index += 1
-        output[output_index] = n.to_u8
+        output[output_index] = n.to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 8).to_u8
+        output[output_index] = (n.to_u32 >> 8).to_u8!
         output_index += 1
       elsif n < (1 << 24)
-        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 3 << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 3 << 2)).to_u8!
         output_index += 1
-        output[output_index] = n.to_u8
+        output[output_index] = n.to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 8).to_u8
+        output[output_index] = (n.to_u32 >> 8).to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 16).to_u8
+        output[output_index] = (n.to_u32 >> 16).to_u8!
         output_index += 1
       else
-        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 4 << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Literal.value | (59 + 4 << 2)).to_u8!
         output_index += 1
-        output[output_index] = n.to_u8
+        output[output_index] = n.to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 8).to_u8
+        output[output_index] = (n.to_u32 >> 8).to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 16).to_u8
+        output[output_index] = (n.to_u32 >> 16).to_u8!
         output_index += 1
-        output[output_index] = (n.to_u32 >> 24).to_u8
+        output[output_index] = (n.to_u32 >> 24).to_u8!
         output_index += 1
       end
       Utils.check_position_indexes(literal_index, literal_index + length, literal.size)
@@ -306,16 +306,16 @@ module Snappy
       if (length < 12) && (offset < 2048)
         len_min_4 = length - 4
         raise "must fit in 3 bits" unless len_min_4 < 8
-        output[output_index] = (Snappy::ElemType::Copy1.value | ((len_min_4 << 2) | ((offset.to_u32 >> 8) << 5))).to_u8
+        output[output_index] = (Snappy::ElemType::Copy1.value | ((len_min_4 << 2) | ((offset.to_u32 >> 8) << 5))).to_u8!
         output_index += 1
-        output[output_index] = offset.to_u8
+        output[output_index] = offset.to_u8!
         output_index += 1
       else
-        output[output_index] = (Snappy::ElemType::Copy2.value | ((length - 1) << 2)).to_u8
+        output[output_index] = (Snappy::ElemType::Copy2.value | ((length - 1) << 2)).to_u8!
         output_index += 1
-        output[output_index] = offset.to_u8
+        output[output_index] = offset.to_u8!
         output_index += 1
-        output[output_index] = (offset.to_u32 >> 8).to_u8
+        output[output_index] = (offset.to_u32 >> 8).to_u8!
         output_index += 1
       end
       output_index
@@ -370,7 +370,7 @@ module Snappy
     # input. Of course, it doesn't hurt if the hash function is reasonably fast
     # either, as it gets called a lot.
     private def hash_bytes(bytes, shift)
-      (bytes * 0x1e35a7bd).to_u32 >> shift
+      (bytes &* 0x1e35a7bd).to_u32! >> shift
     end
 
     private def log2_floor(n : Int32)
@@ -384,39 +384,39 @@ module Snappy
       uncompressed_len = compressed.size
 
       if uncompressed_len < (1 << 7) && uncompressed_len >= 0
-        compressed[compressed_offset] = uncompressed_len.to_u8
+        compressed[compressed_offset] = uncompressed_len.to_u8!
         compressed_offset += 1
       elsif uncompressed_len < (1 << 14) && uncompressed_len > 0
-        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8
+        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 7).to_u8
+        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 7).to_u8!
         compressed_offset += 1
       elsif uncompressed_len < (1 << 21) && uncompressed_len > 0
-        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8
+        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 14).to_u8
+        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 14).to_u8!
         compressed_offset += 1
       elsif uncompressed_len < (1 << 28) && uncompressed_len > 0
-        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8
+        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 14) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 14) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 21).to_u8
+        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 21).to_u8!
         compressed_offset += 1
       else
-        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8
+        compressed[compressed_offset] = (uncompressed_len | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 7) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 14) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 14) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 21) | high_bit_mask).to_u8
+        compressed[compressed_offset] = ((uncompressed_len.to_u32 >> 21) | high_bit_mask).to_u8!
         compressed_offset += 1
-        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 28).to_u8
+        compressed[compressed_offset] = (uncompressed_len.to_u32 >> 28).to_u8!
         compressed_offset += 1
       end
       compressed_offset

@@ -171,7 +171,6 @@ module Snappy
     end
 
     private def get_trailer(input, bytes)
-      trailer = 0
       case bytes
       when 4
         trailer = (input[3].to_i & 0xff) << 24
@@ -187,6 +186,8 @@ module Snappy
         trailer |= input[0].to_i & 0xff
       when 1
         trailer = input[0].to_i & 0xff
+      else
+        trailer = 0
       end
       trailer
     end

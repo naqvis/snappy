@@ -24,7 +24,7 @@
 require "snappy"
 ```
 
-Module provides both `Snappy::Reader` and `Snappy::Writer` for use with streams like `IO` and/or files. It also provides `Snappy#decode` and `Snappy#encode` for uncompressing and compressing block formats.
+Module provides both `Compress::Snappy::Reader` and `Compress::Snappy::Writer` for use with streams like `IO` and/or files. It also provides `Compress::Snappy#decode` and `Compress::Snappy#encode` for uncompressing and compressing block formats.
 
 ## Example: decompress a snappy file
 #
@@ -34,7 +34,7 @@ require "snappy"
 File.write("file.sz", Bytes[255, 6, 0, 0, 115, 78, 97, 80, 112, 89, 1, 8, 0, 0, 104, 16, 130, 162, 97, 98, 99, 100])
 
 string = File.open("file.sz") do |file|
-   Snappy::Reader.open(file) do |sz|
+   Compress::Snappy::Reader.open(file) do |sz|
      sz.gets_to_end
    end
 end
@@ -49,7 +49,7 @@ File.write("file.txt", "abcd")
 
 File.open("./file.txt", "r") do |input_file|
   File.open("./file.sz", "w") do |output_file|
-    Snappy::Writer.open(output_file) do |sz|
+    Compress::Snappy::Writer.open(output_file) do |sz|
       IO.copy(input_file, sz)
     end
   end

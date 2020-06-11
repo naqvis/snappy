@@ -22,7 +22,7 @@
 # ```
 require "./crc32c"
 
-class Snappy::Writer < IO
+class Compress::Snappy::Writer < IO
   # Whether to close the enclosed `IO` when closing this writer.
   property? sync_close = false
 
@@ -63,14 +63,17 @@ class Snappy::Writer < IO
   end
 
   # See `IO#write`.
-  def write(slice : Bytes) : Nil
+  def write(slice : Bytes) : Int64
     check_open
-    return if slice.empty?
+    return 0i64 if slice.empty?
     free = Snappy::Consts::MAX_BLOCK_SIZE - @position
     offset = 0
     length = slice.size
     # enough free space in buffer for entire input
-    return copy_to_buffer(slice[offset..], slice.size) if free >= length
+    if free >= length
+      copy_to_buffer(slice[offset..], slice.size)
+      return slice.size.to_i64
+    end
 
     # fill partial buffer as much as possible and flush
     unless @position <= 0
@@ -89,6 +92,7 @@ class Snappy::Writer < IO
 
     # copy remaining partial block into now-empty buffer
     copy_to_buffer(slice[offset..], length)
+    slice.size.to_i64
   end
 
   # Compresses and write out any unbuffered data. This does nothing if there is no

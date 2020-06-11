@@ -1,4 +1,4 @@
-module Snappy
+module Compress::Snappy
   private module Utils
     extend self
 

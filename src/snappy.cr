@@ -14,8 +14,8 @@
 # The canonical, C++ implementation is at https://github.com/google/snappy and
 # it only implements the block format.
 
-module Snappy
-  VERSION = "0.1.3"
+module Compress::Snappy
+  VERSION = "0.1.4"
 end
 
 require "./snappy/*"

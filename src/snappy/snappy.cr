@@ -1,7 +1,7 @@
 # The Snappy module contains readers and writers of Snappy format compressed
 # data, as specified in [Snappy](https://github.com/google/snappy).
 
-module Snappy
+module Compress::Snappy
   class SnappyError < Exception
   end
 

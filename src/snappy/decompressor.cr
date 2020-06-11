@@ -1,4 +1,4 @@
-module Snappy
+module Compress::Snappy
   private module Decompressor
     extend self
 

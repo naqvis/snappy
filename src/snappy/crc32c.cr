@@ -1,7 +1,7 @@
 # A pure Crystal implementation of the CRC32 checksum that uses
 # the CRC32-C Castagnoli polynomial, the same polynomial used by iSCSI
 # and implemented on many Intel chipsets supporting SSE4.2.
-class Snappy::CRC32C
+class Compress::Snappy::CRC32C
   private MASK_DELTA = 0xa282ead8
   @crc : UInt32
 

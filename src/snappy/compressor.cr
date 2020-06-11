@@ -1,4 +1,4 @@
-module Snappy
+module Compress::Snappy
   private module Compressor
     extend self
     # *** DO NOT CHANGE THE VALUE OF BLOCK_SIZE ***

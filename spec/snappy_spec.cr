@@ -1,6 +1,6 @@
 require "./spec_helper"
 
-module Snappy
+module Compress::Snappy
   it "Test Byte for Byte Test Files" do
     files = test_files
     files.each do |file|

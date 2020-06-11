@@ -24,7 +24,7 @@
 
 require "./crc32c"
 
-class Snappy::Reader < IO
+class Compress::Snappy::Reader < IO
   include IO::Buffered
   # Whether to close the enclosed `IO` when closing this reader.
   property? sync_close = false

@@ -1,7 +1,7 @@
 require "spec"
 require "../src/snappy"
 
-module Snappy
+module Compress::Snappy
   extend self
   TEST_DATA_DIR = "./spec/testdata"
   GENERATOR     = RandomGenerator.new(0.5)

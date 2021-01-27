@@ -274,7 +274,7 @@ module Compress::Snappy
 
   it "Test empty stream" do
     expect_raises(SnappyError, "encountered EOF while reading stream header") do
-      uncompress(Bytes.empty)
+      uncompress(Bytes.new(0))
     end
   end
 

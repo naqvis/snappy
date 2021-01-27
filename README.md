@@ -1,8 +1,7 @@
-[![Build Status](https://travis-ci.org/naqvis/snappy.svg?branch=master)](https://travis-ci.org/naqvis/snappy)
+# Crystal Snappy
+![CI](https://github.com/naqvis/snappy/workflows/CI/badge.svg)
 [![GitHub release](https://img.shields.io/github/release/naqvis/snappy.svg)](https://github.com/naqvis/snappy/releases)
 [![Docs](https://img.shields.io/badge/docs-available-brightgreen.svg)](https://naqvis.github.io/snappy/)
-
-# Crystal Snappy
 
 **Pure Crystal** implementation of [Snappy](https://github.com/google/snappy) compression format. This implementation supports more common case [Snappy Framing Format](https://github.com/google/snappy/blob/master/framing_format.txt).
 

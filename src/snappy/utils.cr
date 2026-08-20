@@ -3,7 +3,7 @@ module Compress::Snappy
     extend self
 
     def check_position_indexes(s, e, len)
-      raise bad_position_indexes(s, e, len) if (s < 0 || e < s || e > len)
+      raise bad_position_indexes(s, e, len) if s < 0 || e < s || e > len
     end
 
     def bad_position_indexes(s, e, len)
@@ -23,7 +23,7 @@ module Compress::Snappy
       check_position_indexes(right_index, right_index + length, right.size)
 
       0.upto(length - 1) do |i|
-        return false if (left[left_index + i] != right[right_index + i])
+        return false if left[left_index + i] != right[right_index + i]
       end
       true
     end

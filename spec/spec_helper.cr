@@ -76,7 +76,7 @@ module Compress::Snappy
     end
 
     def next_position(length)
-      if (@position + length > @data.size)
+      if @position + length > @data.size
         @position = 0
         fail "length < @data.size" unless length < @data.size
       end

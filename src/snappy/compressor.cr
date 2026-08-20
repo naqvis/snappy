@@ -120,7 +120,7 @@ module Compress::Snappy
           ip_index = candidate_result[0]
           candidate_index = candidate_result[1]
           skip = candidate_result[2]
-          break if (ip_index + bytes_between_hash_lookups(skip) > ip_limit)
+          break if ip_index + bytes_between_hash_lookups(skip) > ip_limit
 
           # Step 2: A 4-byte match has been found.  We'll later see if more
           # than 4 bytes match.  But, prior to the match, input
@@ -146,7 +146,7 @@ module Compress::Snappy
       end
 
       # goto emit_remainder hack
-      if (next_emit_index < ip_end_index)
+      if next_emit_index < ip_end_index
         # emit the remaining bytes as a literal
         output_index += emit_literal(output[output_index..], input[next_emit_index..], ip_end_index - next_emit_index)
       end
@@ -215,7 +215,7 @@ module Compress::Snappy
         output_index += emit_copy(output[output_index..], offset, matched)
 
         # are we done?
-        return {ip_index, output_index} if (ip_index >= input_offset + input_size - INPUT_MARGIN_BYTES)
+        return {ip_index, output_index} if ip_index >= input_offset + input_size - INPUT_MARGIN_BYTES
 
         # we could immediately start working at ip now, but to improve compression we first
         # update table[hash_bytes(ip -1, ...)].

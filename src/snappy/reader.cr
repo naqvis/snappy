@@ -32,6 +32,9 @@ class Compress::Snappy::Reader < IO
   # Returns `true` if this reader is closed.
   getter? closed = false
 
+  # Returns the wrapped `IO`.
+  getter io
+
   # Creates a new reader from the given *io*.
   def initialize(@io : IO, @verify_checksums = true, @sync_close = false)
     # stream must begin with stream header
@@ -63,14 +66,14 @@ class Compress::Snappy::Reader < IO
 
   # Creates a new reader from the given *io*, yields it to the given block,
   # and closes it at the end.
-  def self.open(io : IO, verify_checksums = true, sync_close = false)
+  def self.open(io : IO, verify_checksums = true, sync_close = false, &)
     reader = new(io, verify_checksums, sync_close: sync_close)
     yield reader ensure reader.close
   end
 
   # Creates a new reader from the given *filename*, yields it to the given block,
   # and closes it at the end.
-  def self.open(filename : String, verify_checksums = true)
+  def self.open(filename : String, verify_checksums = true, &)
     reader = new(filename, verify_checksums)
     yield reader ensure reader.close
   end
@@ -105,11 +108,11 @@ class Compress::Snappy::Reader < IO
   def unbuffered_rewind
     check_open
     @io.rewind
-    initialize(@io, @sync_close)
+    initialize(@io, @verify_checksums, @sync_close)
   end
 
   def reset(io)
-    initialize(io, @sync_close)
+    initialize(io, @verify_checksums, @sync_close)
   end
 
   private def available
@@ -144,6 +147,9 @@ class Compress::Snappy::Reader < IO
 
     if meta.action == FrameAction::UNCOMPRESS
       uncompressed_len = Decompressor.uncompressed_length(@input[frame.offset..])
+      # the framing format caps the uncompressed data in a chunk at MAX_BLOCK_SIZE;
+      # enforcing it prevents a compressed chunk from claiming an unbounded length
+      raise SnappyError.new("Chunk uncompressed length #{uncompressed_len} exceeds the max block size #{Consts::MAX_BLOCK_SIZE}") if uncompressed_len > Consts::MAX_BLOCK_SIZE
       @uncompressed = Bytes.new(uncompressed_len) if uncompressed_len > @uncompressed.size
       @valid = Decompressor.uncompress(@input[frame.offset, actual_read - frame.offset], @uncompressed)
 
@@ -188,14 +194,14 @@ class Compress::Snappy::Reader < IO
       min_len = 6
     else
       # Section 4.5. Reserved unskippable chunks (chunk types 0x02-0x7f).
-      raise SnappyError.new "unsupported unskippable chunk #{chunk_type.to_s}" if chunk_type.value <= 0x7f
+      raise SnappyError.new "unsupported unskippable chunk #{chunk_type}" if chunk_type.value <= 0x7f
       #  Section 4.4 Padding (chunk type 0xfe).
       # Section 4.6. Reserved skippable chunks (chunk types 0x80-0xfd).
       action = FrameAction::SKIP
       min_len = 0
     end
 
-    raise SnappyError.new("invalid length: #{length} for chunk flag: #{chunk_type.to_s}") if length < min_len
+    raise SnappyError.new("invalid length: #{length} for chunk flag: #{chunk_type}") if length < min_len
 
     FrameMetaData.new(action, length)
   end

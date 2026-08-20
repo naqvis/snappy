@@ -3,7 +3,7 @@
 #
 # There are actually two Snappy formats: block and stream. They are related,
 # but different: trying to decompress block-compressed data as a Snappy stream
-# will fail, and vice versa. The block format is the `Snappy.decode` and `Snappy.encode`
+# will fail, and vice versa. The block format is the `Compress::Snappy.decode` and `Compress::Snappy.encode`
 # functions and the stream format is the Reader and Writer types.
 #
 # The block format, the more common case, is used when the complete size (the

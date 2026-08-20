@@ -99,6 +99,7 @@ module Compress::Snappy
           src_index = op_index - copy_offset
 
           raise SnappyError.new("Invalid copy offset for opcode starting at #{ip_index - trailer_bytes - 1}") if src_index < 0
+          raise SnappyError.new("Corrupt input: copy length exceeds available output") if space_left < length
 
           if length <= 16 && copy_offset >= 8 && space_left >= 16
             # fast path, used for the majority (70-80%) of dynamic invocations.
@@ -156,6 +157,8 @@ module Compress::Snappy
 
         raise SnappyError.new("Invalid copy offset for opcode starting at #{ip_index - trailer_bytes - 1}") if src_index < 0
 
+        raise SnappyError.new("Corrupt input: copy length exceeds available output") if space_left < length
+
         if length <= 16 && copy_offset >= 8 && space_left >= 16
           # fast path, used for the majority (70-80%) of dynamic invocations.
           Utils.copy_long(output[src_index..], output[op_index..])
@@ -171,6 +174,7 @@ module Compress::Snappy
     end
 
     private def get_trailer(input, bytes)
+      raise SnappyError.new("Corrupt input: truncated trailer") if input.size < bytes
       case bytes
       when 4
         trailer = (input[3].to_i & 0xff) << 24

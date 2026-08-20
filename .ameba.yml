@@ -1,0 +1,3 @@
+Naming/BlockParameterName:
+  Description: Disallows non-descriptive block parameter names
+  MinNameLength: 1

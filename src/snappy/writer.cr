@@ -39,21 +39,21 @@ class Compress::Snappy::Writer < IO
   end
 
   # Creates a new writer to the given *filename*.
-  def self.new(filename : String)
-    new(::File.new(filename, "w"), sync_close: true)
+  def self.new(filename : String, compression_ratio = Snappy::Consts::MIN_COMPRESSION_RATIO)
+    new(::File.new(filename, "w"), compression_ratio: compression_ratio, sync_close: true)
   end
 
   # Creates a new writer to the given *io*, yields it to the given block,
   # and closes it at the end.
-  def self.open(io : IO, sync_close = false)
-    writer = new(io, sync_close: sync_close)
+  def self.open(io : IO, sync_close = false, compression_ratio = Snappy::Consts::MIN_COMPRESSION_RATIO, &)
+    writer = new(io, compression_ratio: compression_ratio, sync_close: sync_close)
     yield writer ensure writer.close
   end
 
   # Creates a new writer to the given *filename*, yields it to the given block,
   # and closes it at the end.
-  def self.open(filename : String)
-    writer = new(filename)
+  def self.open(filename : String, compression_ratio = Snappy::Consts::MIN_COMPRESSION_RATIO, &)
+    writer = new(filename, compression_ratio: compression_ratio)
     yield writer ensure writer.close
   end
 
@@ -99,7 +99,7 @@ class Compress::Snappy::Writer < IO
   # See `IO#flush`.
   def flush
     check_open
-    if (@position > 0)
+    if @position > 0
       write_compressed(@in_buf, @position)
       @position = 0
     end
@@ -125,8 +125,8 @@ class Compress::Snappy::Writer < IO
     crc = CRC32C.masked_crc32c(input, length)
     compressed = Compressor.compress(input, length, @out_buf, 0)
 
-    # only use the compressed data if compression ratio is <= MIN_COMPRESSION_RATIO
-    if (compressed.to_f64 / length) <= Consts::MIN_COMPRESSION_RATIO
+    # only use the compressed data if compression ratio is <= @compression_ratio
+    if (compressed.to_f64 / length) <= @compression_ratio
       write_block(@out_buf, compressed, true, crc)
     else
       # otherwise use the uncompressed data

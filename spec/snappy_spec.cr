@@ -28,8 +28,8 @@ module Compress::Snappy
     # length: 23 = 0x000017
     compressed[11..13].should eq(Bytes[0x17, 0x00, 0x00])
 
-    # crc32c: 0x11911124
-    compressed[14..17].dup.reverse!.should eq(Bytes[0x11, 0x91, 0x11, 0x24])
+    # masked crc32c: 0x9274cda8 (little-endian in the frame)
+    compressed[14..17].dup.reverse!.should eq(Bytes[0x92, 0x74, 0xcd, 0xa8])
   end
 
   it "Test Empty Compression" do
@@ -134,7 +134,7 @@ module Compress::Snappy
   end
 
   it "Test Larger frames compressed" do
-    random = random_data(0.5, 500000)
+    random = random_data(0.5, 60000)
     compressed = Snappy.encode(random)
 
     input = Bytes.new(Consts::MAGIC_CHUNK.size + 8 + compressed.size)
@@ -159,7 +159,7 @@ module Compress::Snappy
   end
 
   it "Test Larger frames compressed with smaller raw larger" do
-    random = random_data(0.5, 100000)
+    random = random_data(0.5, 60000)
     compressed = Snappy.encode(random)
 
     input = Bytes.new(Consts::MAGIC_CHUNK.size + 8 + compressed.size)
@@ -327,6 +327,120 @@ module Compress::Snappy
   it "Test Byte for Byte output synthetic random data" do
     1.upto((65 * 1024) - 1) do |i|
       verify_compression(i)
+    end
+  end
+
+  it "CRC32C matches reference vectors" do
+    {
+      ""                          => 0xa282ead8_u32,
+      "abc"                       => 0x21f1576e_u32,
+      "123456789"                 => 0xc78ab0e5_u32,
+      "aaaaaaaaaaaabbbbbbbaaaaaa" => 0x9274cda8_u32,
+    }.each do |input, expected|
+      CRC32C.masked_crc32c(input.to_slice).should eq(expected)
+    end
+  end
+
+  it "CRC32C unmask is the inverse of mask" do
+    [0_u32, 0x12345678_u32, 0xE3069283_u32, 0xA282EAD8_u32, 0xFFFFFFFF_u32].each do |crc|
+      CRC32C.unmask(CRC32C.mask(crc)).should eq(crc)
+    end
+  end
+
+  it "honors compression_ratio" do
+    rnd = Random.new(42)
+    data = Bytes.new(20_000)
+    i = 0
+    while i < data.size
+      if i > 8 && rnd.rand < 0.55
+        back = 1 + rnd.rand(8).to_i
+        ln = [rnd.rand(8).to_i + 4, data.size - i].min
+        data[i, ln].copy_from(data[i - back, ln])
+        i += ln
+      else
+        data[i] = rnd.rand(256).to_u8
+        i += 1
+      end
+    end
+
+    # the data compresses to ~45%, so a 0.3 threshold must force a raw chunk
+    io = IO::Memory.new
+    Compress::Snappy::Writer.open(io, compression_ratio: 0.3) { |w| w.write data }
+    io.rewind
+    io.to_s.byte_at(10).should eq(ChunkType::Uncompressed.value)
+
+    # the default threshold (0.85) stores the same data compressed
+    io = IO::Memory.new
+    Compress::Snappy::Writer.open(io, compression_ratio: 0.85) { |w| w.write data }
+    io.rewind
+    io.to_s.byte_at(10).should eq(ChunkType::Compressed.value)
+  end
+
+  it "rewind does not disable checksum verification" do
+    corrupt = (Consts::MAGIC_CHUNK + String.new(Bytes[1, 5, 0, 0, 0, 0, 0, 0, 97])).to_slice
+    path = File.tempname("snappy_rewind_verify")
+    File.write(path, String.new(corrupt))
+    begin
+      reader = Compress::Snappy::Reader.new(path, verify_checksums: true)
+      expect_raises(SnappyError, "Corrupt input: invalid checksum") { reader.gets_to_end }
+      reader.rewind
+      expect_raises(SnappyError, "Corrupt input: invalid checksum") { reader.gets_to_end }
+    ensure
+      File.delete(path)
+    end
+  end
+
+  it "rewind keeps sync_close" do
+    path = File.tempname("snappy_rewind_sync")
+    File.write(path, String.new(compress("hello".to_slice)))
+    begin
+      reader = Compress::Snappy::Reader.new(path)
+      reader.gets_to_end
+      reader.rewind
+      reader.gets_to_end
+      reader.close
+      reader.@io.closed?.should be_true
+    ensure
+      File.delete(path)
+    end
+  end
+
+  it "raises SnappyError when a copy exceeds the available output" do
+    # varint len 4, 4-byte literal, then a 64-byte copy at offset 1 with no room left
+    block = Bytes[4, 0x0c, 97, 97, 97, 97, 0xfe, 1, 0, 0, 0, 0, 0]
+    expect_raises(SnappyError, "Corrupt input: copy length exceeds available output") do
+      Compress::Snappy.decode(block)
+    end
+  end
+
+  it "raises SnappyError when a trailer overruns the input" do
+    # varint len 1, copy4 opcode claiming 4 trailer bytes with only 1 byte present
+    block = Bytes[1, 0xff, 0]
+    expect_raises(SnappyError, "Corrupt input: truncated trailer") do
+      Compress::Snappy.decode(block)
+    end
+  end
+
+  it "rejects compressed chunks that claim more than the max block size" do
+    # a compressed chunk whose varint claims 100_000 uncompressed bytes (> 65536)
+    random = random_data(0.5, 100_000)
+    compressed = Compress::Snappy.encode(random)
+    input = Bytes.new(Consts::MAGIC_CHUNK.size + 8 + compressed.size)
+    input.copy_from(Consts::MAGIC_CHUNK.to_unsafe, Consts::MAGIC_CHUNK.size)
+    input[10] = ChunkType::Compressed.value.to_u8
+    length = compressed.size.to_u32 + 4
+    input[11] = length.to_u8!
+    input[12] = (length >> 8).to_u8!
+    input[13] = (length >> 16).to_u8!
+    crc32 = CRC32C.masked_crc32c(random)
+    input[14] = crc32.to_u8!
+    input[15] = (crc32 >> 8).to_u8!
+    input[16] = (crc32 >> 16).to_u8!
+    input[17] = (crc32 >> 24).to_u8!
+    input[18..].copy_from(compressed.to_unsafe, compressed.size)
+
+    expect_raises(SnappyError, "exceeds the max block size") do
+      uncompress(input)
     end
   end
 end

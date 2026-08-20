@@ -22,22 +22,23 @@ class Compress::Snappy::CRC32C
   end
 
   # return the crc whose masked representation is masked crc
-  def self.unmask(masked_crc)
-    rot = masked_crc32c - MASK_DELTA
+  def self.unmask(masked_crc : UInt32) : UInt32
+    rot = masked_crc &- MASK_DELTA
     (rot >> 17) | (rot << 15)
   end
 
   def initialize
-    @crc = 0_u32 # current CRC value, bit-flipped
-    reset
+    @crc = 0xFFFFFFFF_u32
   end
 
   def masked_value
     CRC32C.mask(~@crc)
   end
 
+  # The CRC-32C (Castagnoli) register starts at 0xFFFFFFFF and the final
+  # value is complemented, per the iSCSI/SCTP definition used by Snappy.
   def reset
-    @crc = 0_u32
+    @crc = 0xFFFFFFFF_u32
   end
 
   def update(b : Slice)
@@ -54,21 +55,26 @@ class Compress::Snappy::CRC32C
     off = 0
     while len > 7
       c0 = b[off].to_u32 ^ local_crc
-      c1 = b[off + 1].to_u32 ^ (local_crc = (local_crc.to_u >> 8).to_u32)
-      c2 = b[off + 2].to_u32 ^ (local_crc = (local_crc.to_u >> 8).to_u32)
-      c3 = b[off + 3].to_u32 ^ (local_crc = (local_crc.to_u >> 8).to_u32)
+      c1 = b[off + 1].to_u32 ^ (local_crc = (local_crc.to_u32! >> 8))
+      c2 = b[off + 2].to_u32 ^ (local_crc = (local_crc.to_u32! >> 8))
+      c3 = b[off + 3].to_u32 ^ (local_crc = (local_crc.to_u32! >> 8))
+      local_crc = (T8_7[c0 & 0xff] ^ T8_6[c1 & 0xff]).to_u32! ^
+                  (T8_5[c2 & 0xff] ^ T8_4[c3 & 0xff]).to_u32!
       off += 4
-      local_crc = ((T8_7[c0 & 0xff] ^ T8_6[c1 & 0xff]) ^
-                   (T8_5[c2 & 0xff] ^ T8_4[c3 & 0xff])).to_u32!
 
-      local_crc ^= (T8_3[b[off] & 0xff] ^ T8_2[b[off + 1] & 0xff]) ^
-                   (T8_1[b[off + 2] & 0xff] ^ T8_0[b[off + 3] & 0xff])
+      c4 = b[off].to_u32 & 0xff
+      c5 = b[off + 1].to_u32 & 0xff
+      c6 = b[off + 2].to_u32 & 0xff
+      c7 = b[off + 3].to_u32 & 0xff
+      local_crc = ((local_crc ^ T8_3[c4]).to_u32! ^
+                   (T8_2[c5] ^ T8_1[c6]).to_u32! ^
+                   (T8_0[c7]).to_u32!).to_u32!
       off += 4
       len -= 8
     end
 
     while len > 0
-      local_crc = ((local_crc.to_u32 >> 8) ^ T8_0[(local_crc ^ b[off]) & 0xff]).to_u32!
+      local_crc = ((local_crc.to_u32! >> 8) ^ T8_0[(local_crc ^ b[off]) & 0xff]).to_u32!
       off += 1
       len -= 1
     end
